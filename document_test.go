@@ -8,8 +8,8 @@ import (
 	"github.com/darkwyrm/oganesson/membufio"
 )
 
-func TestWireMsgFlattenUnflattenSize(t *testing.T) {
-	wm := NewWireMsg("TestMsg")
+func TestDocumentFlattenUnflattenSize(t *testing.T) {
+	wm := NewDocument("TestMsg")
 	wm.AttachString("testString", "abcdef")
 	wm.AttachInt64("testInt", 42)
 
@@ -62,7 +62,7 @@ func TestWireMsgFlattenUnflattenSize(t *testing.T) {
 			[]byte(expectedBytes), []byte(p))
 	}
 
-	var um WireMsg
+	var um Document
 	err = um.Unflatten(expectedBytes)
 	if err != nil {
 		t.Fatalf("Error unflattening message: %s\n", err.Error())
@@ -95,7 +95,7 @@ func TestWireMsgFlattenUnflattenSize(t *testing.T) {
 	}
 }
 
-func WireMsgReadWriteSetup(sync chan int, port string) {
+func DocumentReadWriteSetup(sync chan int, port string) {
 	// Wait until the test is ready and then go from there
 	<-sync
 	time.Sleep(time.Millisecond * 100)
@@ -107,7 +107,7 @@ func WireMsgReadWriteSetup(sync chan int, port string) {
 	s := NewPacketRequester(senderconn)
 	s.Timeout = time.Minute * 5
 
-	wm := NewWireMsg("TestMsg")
+	wm := NewDocument("TestMsg")
 	wm.AttachString("testString", "abcdef")
 	wm.AttachInt64("testInt", 42)
 
@@ -125,10 +125,10 @@ func WireMsgReadWriteSetup(sync chan int, port string) {
 	}
 }
 
-func TestWireMsgReadWrite(t *testing.T) {
+func TestDocumentReadWrite(t *testing.T) {
 	MaxCommandLength = 300
 	sync := make(chan int)
-	go WireMsgReadWriteSetup(sync, "3008")
+	go DocumentReadWriteSetup(sync, "3008")
 
 	listener, err := net.Listen("tcp", "127.0.0.1:3008")
 	if err != nil {
@@ -146,7 +146,7 @@ func TestWireMsgReadWrite(t *testing.T) {
 	s := NewPacketResponder(conn, 32767)
 	s.Timeout = time.Minute * 5
 
-	wm := NewWireMsg("")
+	wm := NewDocument("")
 	s.UpdateTimeout()
 	err = wm.Read(s.Connection)
 	if err != nil {
@@ -174,124 +174,124 @@ func TestWireMsgReadWrite(t *testing.T) {
 	}
 }
 
-func TestWireMsgGetSetInt(t *testing.T) {
+func TestDocumentGetSetInt(t *testing.T) {
 
-	wm := NewWireMsg("TestCommand")
+	wm := NewDocument("TestCommand")
 
 	if err := wm.AttachInt8("testval", 3); err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to set an int8: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to set an int8: %s", err.Error())
 	}
 	tests8, err := wm.GetInt8("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to get an int8: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to get an int8: %s", err.Error())
 	}
 	if tests8 != 3 {
-		t.Fatalf("TestWireMsgGetSetInt int8 value failure: wanted 3, got %v", tests8)
+		t.Fatalf("TestDocumentGetSetInt int8 value failure: wanted 3, got %v", tests8)
 	}
 
 	if err := wm.AttachUInt8("testval", 4); err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to set a uint8: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to set a uint8: %s", err.Error())
 	}
 	testu8, err := wm.GetUInt8("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to get a uint8: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to get a uint8: %s", err.Error())
 	}
 	if testu8 != 4 {
-		t.Fatalf("TestWireMsgGetSetInt uint8 value failure: wanted 4, got %v", testu8)
+		t.Fatalf("TestDocumentGetSetInt uint8 value failure: wanted 4, got %v", testu8)
 	}
 
 	if err := wm.AttachInt16("testval", 1000); err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to set an int16: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to set an int16: %s", err.Error())
 	}
 	tests16, err := wm.GetInt16("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to get an int16: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to get an int16: %s", err.Error())
 	}
 	if tests16 != 1000 {
-		t.Fatalf("TestWireMsgGetSetInt int16 value failure: wanted 1000, got %v", tests16)
+		t.Fatalf("TestDocumentGetSetInt int16 value failure: wanted 1000, got %v", tests16)
 	}
 
 	if err := wm.AttachUInt16("testval", 2000); err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to set a uint16: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to set a uint16: %s", err.Error())
 	}
 	testu16, err := wm.GetUInt16("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to get a uint16: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to get a uint16: %s", err.Error())
 	}
 	if testu16 != 2000 {
-		t.Fatalf("TestWireMsgGetSetInt uint16 value failure: wanted 2000, got %v", testu16)
+		t.Fatalf("TestDocumentGetSetInt uint16 value failure: wanted 2000, got %v", testu16)
 	}
 
 	if err := wm.AttachInt32("testval", 70000); err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to set an int32: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to set an int32: %s", err.Error())
 	}
 	tests32, err := wm.GetInt32("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to get an int32: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to get an int32: %s", err.Error())
 	}
 	if tests32 != 70000 {
-		t.Fatalf("TestWireMsgGetSetInt int32 value failure: wanted 70000, got %v", tests32)
+		t.Fatalf("TestDocumentGetSetInt int32 value failure: wanted 70000, got %v", tests32)
 	}
 
 	if err := wm.AttachUInt32("testval", 80000); err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to set a uint32: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to set a uint32: %s", err.Error())
 	}
 	testu32, err := wm.GetUInt32("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to get a uint32: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to get a uint32: %s", err.Error())
 	}
 	if testu32 != 80000 {
-		t.Fatalf("TestWireMsgGetSetInt uint32 value failure: wanted 80000, got %v", testu32)
+		t.Fatalf("TestDocumentGetSetInt uint32 value failure: wanted 80000, got %v", testu32)
 	}
 
 	if err := wm.AttachInt64("testval", 0x10000); err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to set an int64: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to set an int64: %s", err.Error())
 	}
 	tests64, err := wm.GetInt64("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to get an int64: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to get an int64: %s", err.Error())
 	}
 	if tests64 != 0x10000 {
-		t.Fatalf("TestWireMsgGetSetInt int64 value failure: wanted 0x10000, got %x", tests64)
+		t.Fatalf("TestDocumentGetSetInt int64 value failure: wanted 0x10000, got %x", tests64)
 	}
 
 	if err := wm.AttachUInt64("testval", 0x20000); err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to set a uint64: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to set a uint64: %s", err.Error())
 	}
 	testu64, err := wm.GetUInt64("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetInt failed to get a uint64: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetInt failed to get a uint64: %s", err.Error())
 	}
 	if testu64 != 0x20000 {
-		t.Fatalf("TestWireMsgGetSetInt uint64 value failure: wanted 0x20000, got %x", testu64)
+		t.Fatalf("TestDocumentGetSetInt uint64 value failure: wanted 0x20000, got %x", testu64)
 	}
 }
 
-func TestWireMsgGetSetOther(t *testing.T) {
+func TestDocumentGetSetOther(t *testing.T) {
 
-	wm := NewWireMsg("TestCommand")
+	wm := NewDocument("TestCommand")
 
 	if err := wm.AttachString("testval", "Some test data"); err != nil {
-		t.Fatalf("TestWireMsgGetSetOther failed to set a string: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetOther failed to set a string: %s", err.Error())
 	}
 	teststr, err := wm.GetString("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetOther failed to get a string: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetOther failed to get a string: %s", err.Error())
 	}
 	if teststr != "Some test data" {
-		t.Fatalf("TestWireMsgGetSetOther string value failure: wanted 'Some test data', got '%s'",
+		t.Fatalf("TestDocumentGetSetOther string value failure: wanted 'Some test data', got '%s'",
 			teststr)
 	}
 
 	if err := wm.AttachBinary("testval", []byte("Some binary test data")); err != nil {
-		t.Fatalf("TestWireMsgGetSetOther failed to set a string: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetOther failed to set a string: %s", err.Error())
 	}
 	testbin, err := wm.GetBinary("testval")
 	if err != nil {
-		t.Fatalf("TestWireMsgGetSetOther failed to get a string: %s", err.Error())
+		t.Fatalf("TestDocumentGetSetOther failed to get a string: %s", err.Error())
 	}
 	if string(testbin) != "Some binary test data" {
-		t.Fatalf("TestWireMsgGetSetOther string value failure: "+
+		t.Fatalf("TestDocumentGetSetOther string value failure: "+
 			"wanted 'Some binary test data', got '%s'", string(testbin))
 	}
 
