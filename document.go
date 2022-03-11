@@ -6,18 +6,25 @@ import (
 	"github.com/darkwyrm/oganesson/membufio"
 )
 
+type SegContainer interface {
+	GetType() uint8
+	GetSize() uint64
+	Read(r io.Reader) error
+	Write(w io.Writer) error
+}
+
 // This section handles the Document API, which uses JBitPack serialization to communicate at the
 // session level. This is normally used for setting up encryption, but can als be used by
 // applications wanting greater control over the implementation.
 
 // Document is a JBitPack document containing a string command name and optional associated data.
 type Document struct {
-	Segments []Segment
+	Items []SegContainer
 }
 
 // NewDocument creates a new document with the specified command name
 func NewDocument() *Document {
-	return &Document{make([]Segment, 0)}
+	return &Document{make([]SegContainer, 0)}
 }
 
 // AttachInt8 adds an attachment to the document of the specified type. If the attached data exists,
@@ -29,7 +36,7 @@ func (doc *Document) AttachInt8(name string, value int8) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -43,7 +50,7 @@ func (doc *Document) AttachUInt8(name string, value uint8) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -57,7 +64,7 @@ func (doc *Document) AttachInt16(name string, value int16) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -71,7 +78,7 @@ func (doc *Document) AttachUInt16(name string, value uint16) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -85,7 +92,7 @@ func (doc *Document) AttachInt32(name string, value int32) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -99,7 +106,7 @@ func (doc *Document) AttachUInt32(name string, value uint32) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -113,7 +120,7 @@ func (doc *Document) AttachInt64(name string, value int64) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -127,7 +134,7 @@ func (doc *Document) AttachUInt64(name string, value uint64) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -141,7 +148,7 @@ func (doc *Document) AttachString(name string, value string) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -155,7 +162,7 @@ func (doc *Document) AttachBinary(name string, value []byte) error {
 	if err != nil {
 		return err
 	}
-	doc.Segments = append(doc.Segments, seg)
+	doc.Items = append(doc.Items, seg)
 
 	return nil
 }
@@ -171,14 +178,14 @@ func (doc Document) Flatten() ([]byte, error) {
 		return nil, err
 	}
 
-	for _, seg := range doc.Segments {
+	for _, seg := range doc.Items {
 		if err := seg.Write(&bs); err != nil {
 			return nil, err
 		}
 	}
 
 	var docEnd Segment
-	if err := docEnd.SetDocEnd(uint64(len(doc.Segments))); err != nil {
+	if err := docEnd.SetDocEnd(uint64(len(doc.Items))); err != nil {
 		return nil, err
 	}
 	if err := docEnd.Write(&bs); err != nil {
@@ -199,13 +206,13 @@ func (doc *Document) Read(r io.Reader) error {
 		return ErrInvalidMsg
 	}
 
-	doc.Segments = make([]Segment, 0)
+	doc.Items = make([]SegContainer, 0)
 
 	if err := s.Read(r); err != nil {
 		return err
 	}
 	for s.GetType() != DFDocumentEnd {
-		doc.Segments = append(doc.Segments, s)
+		doc.Items = append(doc.Items, s)
 
 		if err := s.Read(r); err != nil {
 			return err
@@ -217,7 +224,7 @@ func (doc *Document) Read(r io.Reader) error {
 		return err
 	}
 
-	if segCount != uint64(len(doc.Segments)) {
+	if segCount != uint64(len(doc.Items)) {
 		return ErrSize
 	}
 	return nil
@@ -229,7 +236,7 @@ func (doc Document) GetSize() uint64 {
 	// Start with the DocStart segment size
 	out := uint64(2)
 
-	for _, s := range doc.Segments {
+	for _, s := range doc.Items {
 		out += s.GetSize()
 	}
 
@@ -252,14 +259,14 @@ func (doc *Document) Write(w io.Writer) error {
 		return err
 	}
 
-	for _, s := range doc.Segments {
+	for _, s := range doc.Items {
 		if err := s.Write(w); err != nil {
 			return err
 		}
 	}
 
 	var docEnd Segment
-	if err := docEnd.SetDocEnd(uint64(len(doc.Segments))); err != nil {
+	if err := docEnd.SetDocEnd(uint64(len(doc.Items))); err != nil {
 		return err
 	}
 	if err := docEnd.Write(w); err != nil {

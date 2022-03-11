@@ -9,7 +9,7 @@ import (
 )
 
 func TestDocumentFlattenUnflattenSize(t *testing.T) {
-	wm := NewDocument("TestMsg")
+	wm := NewDocument()
 	wm.AttachString("testString", "abcdef")
 	wm.AttachInt64("testInt", 42)
 
@@ -36,7 +36,7 @@ func TestDocumentFlattenUnflattenSize(t *testing.T) {
 		// DocStart
 		"\x01\x01" +
 
-			// Message Code = "TestMsg"
+			// String "TestMsg"
 			"\x0e\x00\x07TestMsg" +
 
 			// Map Count: 2
@@ -67,11 +67,15 @@ func TestDocumentFlattenUnflattenSize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error unflattening message: %s\n", err.Error())
 	}
-	if um.MsgCode != "TestMsg" {
-		t.Fatalf("Wrong message code in unflattened message: expected 'TestMsg', got '%s'\n",
-			um.MsgCode)
+	msgCode, err := um.Segments[0].GetString()
+	if err != nil {
+		t.Fatalf("Error getting message code: %s", err.Error())
 	}
-	if !um.Has("testString") {
+	if msgCode != "TestMsg" {
+		t.Fatalf("Wrong message code in unflattened message: expected 'TestMsg', got '%s'\n",
+			msgCode)
+	}
+	if !um.Segments[1].Has("testString") {
 		t.Fatalf("Missing field 'testString' in unflattened message\n")
 	}
 	if !um.Has("testInt") {
