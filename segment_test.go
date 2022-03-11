@@ -46,7 +46,7 @@ func TestSegment2(t *testing.T) {
 	var seg Segment
 
 	test32 := uint32(10)
-	if err := seg.Set(test32); err != nil {
+	if err := seg.SetUInt32(test32); err != nil {
 		t.Fatalf("Error setting uint32: %s", err.Error())
 	}
 	if seg.Value[3] != 10 {
@@ -54,7 +54,7 @@ func TestSegment2(t *testing.T) {
 	}
 
 	testFlag := true
-	if err := seg.Set(testFlag); err != nil {
+	if err := seg.SetBool(testFlag); err != nil {
 		t.Fatalf("Error setting bool: %s", err.Error())
 	}
 	if seg.Value[0] != 1 {

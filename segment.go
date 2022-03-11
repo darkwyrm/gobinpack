@@ -200,144 +200,6 @@ func (seg Segment) Write(w io.Writer) error {
 	return WriteSegment(w, seg.Type, seg.Value)
 }
 
-// Get pulls the value contained in the buffer and places it into the passed variable. If the
-// variable passed does not match that of the field or isn't a supported type, ErrTypeError will be
-// returned.
-func (seg Segment) Get(data interface{}) error {
-	varType := uint8(DFUnknownType)
-
-	switch data.(type) {
-	case *int:
-		switch strconv.IntSize {
-		case 32:
-			varType = DFInt32Type
-		case 64:
-			varType = DFInt64Type
-		default:
-			panic("unhandled processor architecture size in Segment.Get()")
-		}
-	case *uint:
-		switch strconv.IntSize {
-		case 32:
-			varType = DFUInt32Type
-		case 64:
-			varType = DFUInt64Type
-		default:
-			panic("unhandled processor architecture size in Segment.Get()")
-		}
-	case *int8:
-		varType = DFInt8Type
-	case *uint8:
-		varType = DFUInt8Type
-	case *int16:
-		varType = DFInt16Type
-	case *uint16:
-		varType = DFUInt16Type
-	case *int32:
-		varType = DFInt32Type
-	case *uint32:
-		varType = DFUInt32Type
-	case *int64:
-		varType = DFInt64Type
-	case *uint64:
-		varType = DFUInt64Type
-	case string:
-		varType = DFStringType
-	case *string:
-		varType = DFStringType
-	case []byte:
-		varType = DFBinaryType
-	case *bool:
-		varType = DFBoolType
-	case *float32:
-		varType = DFFloat32Type
-	case *float64:
-		varType = DFFloat64Type
-
-	default:
-		fmt.Printf("Unrecognized type %T", data)
-		return ErrTypeError
-	}
-
-	switch varType {
-	case DFStringType, DFHugeStringType:
-		if seg.Type != DFStringType && seg.Type != DFHugeStringType {
-			return ErrTypeError
-		}
-	case DFBinaryType, DFHugeBinaryType:
-		if seg.Type != DFBinaryType && seg.Type != DFHugeBinaryType {
-			return ErrTypeError
-		}
-	case DFUInt8Type:
-		if seg.Type != DFDocumentStart && seg.Type != DFUInt8Type {
-			return ErrTypeError
-		}
-	case DFUInt64Type:
-		if seg.Type != DFDocumentEnd && seg.Type != DFUInt64Type {
-			return ErrTypeError
-		}
-	default:
-		if varType != seg.Type {
-			return ErrTypeError
-		}
-	}
-
-	if _, ok := data.(string); ok {
-		copy([]byte(data.(string)), seg.Value)
-		return nil
-	}
-	if _, ok := data.(*string); ok {
-		*data.(*string) = string(seg.Value)
-		return nil
-	}
-	if _, ok := data.([]byte); ok {
-		copy(data.([]byte), seg.Value)
-		return nil
-	}
-
-	bs := membufio.New(seg.Value)
-
-	// This hack is even worse than the one in Set() 👿
-	if _, ok := data.(*uint); ok {
-		switch strconv.IntSize {
-		case 32:
-			// Yes, we actually have to create a temporary variable because Read, in its infinite
-			// wisdom, doesn't have a clue how to handle ints and uints. YAY
-			var tempUint32 uint32
-			err := binary.Read(&bs, binary.BigEndian, &tempUint32)
-			*data.(*uint) = uint(tempUint32)
-			return err
-		case 64:
-			var tempUint64 uint64
-			err := binary.Read(&bs, binary.BigEndian, &tempUint64)
-			*data.(*uint) = uint(tempUint64)
-			return err
-		default:
-			panic("unhandled processor architecture size in Segment.Get()")
-		}
-
-	}
-	if _, ok := data.(*int); ok {
-		switch strconv.IntSize {
-		case 32:
-			var tempInt32 int32
-			err := binary.Read(&bs, binary.BigEndian, &tempInt32)
-			*data.(*int) = int(tempInt32)
-			return err
-		case 64:
-			var tempInt64 int64
-			err := binary.Read(&bs, binary.BigEndian, &tempInt64)
-			*data.(*int) = int(tempInt64)
-			return err
-		default:
-			panic("unhandled processor architecture size in Segment.Get()")
-		}
-
-	}
-
-	return binary.Read(&bs, binary.BigEndian, data)
-}
-
 // GetDocStart retrieves the version value from a DocumentStart segment or returns an error
 func (seg Segment) GetDocStart() (uint8, error) {
 	if seg.Type != DFDocumentStart {
@@ -561,123 +423,6 @@ func (seg Segment) GetListIndex() (uint64, error) {
 	default:
 		return 0, ErrTypeError
 	}
-}
-
-// Set converts the value passed to it to a big-endian series of bytes and assigns it to the byte
-// buffer stored in the Segment. The value must have a type belonging to one of the constants in
-// the field type list. Others will cause ErrTypeError to be returned.
-func (seg *Segment) Set(value interface{}) error {
-
-	switch value.(type) {
-	case int:
-		switch strconv.IntSize {
-		case 32:
-			seg.Type = DFInt32Type
-		case 64:
-			seg.Type = DFInt64Type
-		default:
-			panic("unhandled processor architecture size in Segment.Set()")
-		}
-	case uint:
-		switch strconv.IntSize {
-		case 32:
-			seg.Type = DFUInt32Type
-		case 64:
-			seg.Type = DFUInt64Type
-		default:
-			panic("unhandled processor architecture size in Segment.Set()")
-		}
-	case int8:
-		seg.Type = DFInt8Type
-	case uint8:
-		seg.Type = DFUInt8Type
-	case int16:
-		seg.Type = DFInt16Type
-	case uint16:
-		seg.Type = DFUInt16Type
-	case int32:
-		seg.Type = DFInt32Type
-	case uint32:
-		seg.Type = DFUInt32Type
-	case int64:
-		seg.Type = DFInt64Type
-	case uint64:
-		seg.Type = DFUInt64Type
-	case string:
-		seg.Type = DFStringType
-	case []byte:
-		seg.Type = DFBinaryType
-	case bool:
-		seg.Type = DFBoolType
-	case float32:
-		seg.Type = DFFloat32Type
-	case float64:
-		seg.Type = DFFloat64Type
-	default:
-		return ErrTypeError
-	}
-
-	valueLen := SizeOf(value)
-	segLen := uint64(len(seg.Value))
-
-	if segLen != valueLen {
-		seg.Value = make([]byte, valueLen)
-	}
-
-	// I hate the binary package's idiocy. This ugly hack shoudln't be necessary. GRRRR
-	if s, ok := value.(string); ok {
-		if len(s) > 65535 {
-			seg.Type = DFHugeStringType
-		}
-		copy(seg.Value, []byte(s))
-		return nil
-	}
-	if b, ok := value.([]byte); ok {
-		if len(b) > 65535 {
-			seg.Type = DFHugeBinaryType
-		}
-		copy(seg.Value, b)
-		return nil
-	}
-
-	bs := membufio.New(seg.Value)
-
-	if ui, ok := value.(uint); ok {
-		switch strconv.IntSize {
-		case 32:
-			return binary.Write(&bs, binary.BigEndian, uint32(ui))
-		case 64:
-			return binary.Write(&bs, binary.BigEndian, uint64(ui))
-		default:
-			panic("unhandled processor architecture size in Segment.Set()")
-		}
-
-	}
-	if si, ok := value.(int); ok {
-		switch strconv.IntSize {
-		case 32:
-			return binary.Write(&bs, binary.BigEndian, int32(si))
-		case 64:
-			return binary.Write(&bs, binary.BigEndian, int64(si))
-		default:
-			panic("unhandled processor architecture size in Segment.Set()")
-		}
-
-	}
-
-	return binary.Write(&bs, binary.BigEndian, value)
-}
-
-// SetWithType enables writing a segment with a data type and a type code which does not
-// necessarily correspond with the usual, such as using DocumentStart with a uint8.
-func (seg *Segment) SetWithType(typeCode uint8, value interface{}) error {
-	err := seg.Set(value)
-	if err != nil {
-		return err
-	}
-	seg.Type = typeCode
-
-	return nil
 }
 
 // SetDocStart sets the Segment's value and type
@@ -1311,10 +1056,10 @@ func (sm SegmentMap) Write(w io.Writer) error {
 
 	var countSegment Segment
 	if uint64(len(sm)) > 65535 {
-		countSegment.Set(uint64(len(sm)))
+		countSegment.SetUInt64(uint64(len(sm)))
 		countSegment.Type = DFLargeMapType
 	} else {
-		countSegment.Set(uint16(len(sm)))
+		countSegment.SetUInt16(uint16(len(sm)))
 		countSegment.Type = DFMapType
 	}
 	err := countSegment.Write(w)
@@ -1425,10 +1170,10 @@ func (sl SegmentList) Write(w io.Writer) error {
 
 	var countSegment Segment
 	if uint64(len(sl)) > 65535 {
-		countSegment.Set(uint64(len(sl)))
+		countSegment.SetUInt64(uint64(len(sl)))
 		countSegment.Type = DFLargeListType
 	} else {
-		countSegment.Set(uint16(len(sl)))
+		countSegment.SetUInt16(uint16(len(sl)))
 		countSegment.Type = DFListType
 	}
 	err := countSegment.Write(w)
